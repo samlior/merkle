@@ -25,18 +25,13 @@
     "url": "https://github.com/c-geek/merkle/issues"
   },
   "dependencies": {
-    "optimist": "0.6.1",
-    "through": "2.3.6"
+    "hash.js": "^1.1.7"
   },
   "devDependencies": {
+    "concat-stream": "",
+    "event-stream": "",
     "mocha": "",
     "should": "",
-    "async": "",
-    "supertest": "",
-    "event-stream": "",
-    "concat-stream": ""
-  },
-  "bin": {
-    "merkle": "./bin/merkle"
+    "supertest": ""
   }
 }

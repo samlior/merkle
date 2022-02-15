@@ -1,19 +1,17 @@
-
-var crypto = require('crypto');
-var through = require('through');
+var hash = require("hash.js");
+var through = require("./through");
 
 var REGEXP = {
-  'md5':       "^[0-9a-f]{32}$",
-  'sha1':      "^[0-9a-f]{40}$",
-  'ripemd160': "^[0-9a-f]{40}$",
-  'sha256':    "^[0-9a-f]{64}$",
-  'sha512':    "^[0-9a-f]{128}$",
-  'whirlpool': "^[0-9a-f]{128}$",
-  'DEFAULT':   "^$"
+  md5: "^[0-9a-f]{32}$",
+  sha1: "^[0-9a-f]{40}$",
+  ripemd160: "^[0-9a-f]{40}$",
+  sha256: "^[0-9a-f]{64}$",
+  sha512: "^[0-9a-f]{128}$",
+  whirlpool: "^[0-9a-f]{128}$",
+  DEFAULT: "^$",
 };
 
-function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
-
+function Merkle(hashFunc, hashFuncName, useUpperCaseForHash) {
   var that = this;
 
   var resFunc = function () {
@@ -23,7 +21,7 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
   var regexpStr = REGEXP[hashFuncName] || REGEXP.DEFAULT;
   if (useUpperCaseForHash) {
     // Use only capital letters if upper case is enabled
-    regexpStr = regexpStr.replace('a', 'A').replace('f', 'F');
+    regexpStr = regexpStr.replace("a", "A").replace("f", "F");
   }
   that.hashResultRegexp = new RegExp(regexpStr);
   that.leaves = [];
@@ -33,11 +31,10 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
 
   function feed(anyData) {
     var data = String(anyData);
-    if(data && data.match(that.hashResultRegexp)){
+    if (data && data.match(that.hashResultRegexp)) {
       // Push leaf without hashing it since it is already a hash
       that.leaves.push(data);
-    }
-    else{
+    } else {
       var hash = hashFunc(data);
       if (useUpperCaseForHash) {
         hash = hash.toUpperCase();
@@ -49,9 +46,9 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
 
   function depth() {
     // Compute tree depth
-    if(!that.treeDepth){
+    if (!that.treeDepth) {
       var pow = 0;
-      while(Math.pow(2, pow) < that.leaves.length){
+      while (Math.pow(2, pow) < that.leaves.length) {
         pow++;
       }
       that.treeDepth = pow;
@@ -77,14 +74,14 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
 
   function compute() {
     var theDepth = depth();
-    if(that.rows.length == 0){
+    if (that.rows.length == 0) {
       // Compute the nodes of each level
       for (var i = 0; i < theDepth; i++) {
         that.rows.push([]);
       }
       that.rows[theDepth] = that.leaves;
-      for (var j = theDepth-1; j >= 0; j--) {
-        that.rows[j] = getNodes(that.rows[j+1]);
+      for (var j = theDepth - 1; j >= 0; j--) {
+        that.rows[j] = getNodes(that.rows[j + 1]);
         that.nodesCount += that.rows[j].length;
       }
     }
@@ -95,18 +92,18 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
     var nodes = [];
     var hash;
     for (var i = 0; i < leaves.length - 1; i = i + 2) {
-      hash = hashFunc(leaves[i] + leaves[i+1]);
+      hash = hashFunc(leaves[i] + leaves[i + 1]);
       if (useUpperCaseForHash) {
         hash = hash.toUpperCase();
       }
-      nodes[i/2] = hash;
+      nodes[i / 2] = hash;
     }
-    if(remainder === 1){
-      nodes[((leaves.length-remainder)/2)] = leaves[leaves.length - 1];
+    if (remainder === 1) {
+      nodes[(leaves.length - remainder) / 2] = leaves[leaves.length - 1];
     }
     return nodes;
   }
-  
+
   function getProofPath(index, excludeParent) {
     var proofPath = [];
 
@@ -121,7 +118,8 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
       }
 
       var nodes = {};
-      if (index % 2) { // the index is the right node
+      if (index % 2) {
+        // the index is the right node
         nodes.left = currentLevelNodes[index - 1];
         nodes.right = currentLevelNodes[index];
       } else {
@@ -134,15 +132,14 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
         proofPath.push({
           parent: level(currentLevel - 1)[index],
           left: nodes.left,
-          right: nodes.right
+          right: nodes.right,
         });
       } else {
         proofPath.push({
           left: nodes.left,
-          right: nodes.right
+          right: nodes.right,
         });
       }
-
     }
     return proofPath;
   }
@@ -150,72 +147,73 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
   // PUBLIC
 
   /**
-  * Return the stream, with resulting stream begin root hash string.
-  **/
+   * Return the stream, with resulting stream begin root hash string.
+   **/
   var stream = through(
-    function write (data) {
-      feed('' + data);
+    function write(data) {
+      feed("" + data);
     },
-    function end () {
+    function end() {
       compute();
-      this.emit('data', resFunc());
-      this.emit('end');
-    });
+      this.emit("data", resFunc());
+      this.emit("end");
+    }
+  );
 
   /**
-  * Return the stream, but resulting stream will be json.
-  **/
+   * Return the stream, but resulting stream will be json.
+   **/
   stream.json = function () {
-    resFunc = function() {
+    resFunc = function () {
       return {
         root: root(),
         level: level(),
         depth: depth(),
         levels: levels(),
         nodes: nodes(),
-        getProofPath: getProofPath
+        getProofPath: getProofPath,
       };
     };
     return this;
   };
 
   /**
-  * Computes merkle tree synchronously, returning json result.
-  **/
+   * Computes merkle tree synchronously, returning json result.
+   **/
   stream.sync = function (leaves) {
-    leaves.forEach(function(leaf){
+    leaves.forEach(function (leaf) {
       feed(leaf);
     });
     compute();
-    resFunc = function() {
+    resFunc = function () {
       return {
         root: root,
         level: level,
         depth: depth,
         levels: levels,
         nodes: nodes,
-        getProofPath: getProofPath
+        getProofPath: getProofPath,
       };
     };
     return resFunc();
   };
 
   /**
-  * Computes merkle tree asynchronously, returning json as callback result.
-  **/
+   * Computes merkle tree asynchronously, returning json as callback result.
+   **/
   stream.async = function (leaves, done) {
-    leaves.forEach(function(leaf){
+    leaves.forEach(function (leaf) {
       feed(leaf);
     });
     compute();
-    resFunc = function() {
+    resFunc = function () {
       return {
         root: root,
         level: level,
         depth: depth,
         levels: levels,
         nodes: nodes,
-        getProofPath: getProofPath
+        getProofPath: getProofPath,
       };
     };
     done(null, resFunc());
@@ -225,15 +223,17 @@ function Merkle (hashFunc, hashFuncName, useUpperCaseForHash) {
 }
 
 module.exports = function (hashFuncName, useUpperCaseForHash) {
-  return new Merkle(function (input) {
-    if (hashFuncName === 'none') {
-      return input;
-    } else {
-      var hash = crypto.createHash(hashFuncName);
-      return hash.update(input).digest('hex');
-    }
-  }, hashFuncName,
+  return new Merkle(
+    function (input) {
+      if (hashFuncName === "none") {
+        return input;
+      } else {
+        return hash[hashFuncName]().update(input).digest("hex");
+      }
+    },
+    hashFuncName,
 
-  // Use upper case y default
-  useUpperCaseForHash !== false);
+    // Use upper case y default
+    useUpperCaseForHash !== false
+  );
 };
