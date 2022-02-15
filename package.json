@@ -1,5 +1,5 @@
 {
-  "name": "merkle",
+  "name": "@samlr/merkle",
   "version": "0.6.0",
   "description": "Javascript implementation of merkle trees",
   "main": "merkle.js",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:c-geek/merkle.git"
+    "url": "git@github.com:samlior/merkle.git"
   },
   "keywords": [
     "hash trees",
@@ -22,7 +22,7 @@
   "license": "MIT",
   "readmeFilename": "readme.md",
   "bugs": {
-    "url": "https://github.com/c-geek/merkle/issues"
+    "url": "https://github.com/samlior/merkle/issues"
   },
   "dependencies": {
     "hash.js": "^1.1.7"
